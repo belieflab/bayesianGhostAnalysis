@@ -7,11 +7,16 @@ dataLocation <- "data/"
 
 # get csv files names
 dataFiles <- list.files(dataLocation)
+qualtric <- read.csv(paste0(dataLocation,dataFiles[1]))
+dataFiles <- dataFiles[-1]
 
-# 
+# read all subjects 
 db_raw <- lapply(paste0(dataLocation,dataFiles), read.csv)
 for (i in 1:length(dataFiles)) {
   temp <- db_raw[[i]]
+  # duration in minutes
+  duration <- (max(temp$time_elapsed)/1000)/60
+  # filter relevant columns
   temp <- temp[!is.na(temp$index),c("stim","index","workerId","noise","action",
                                     "scramble","communicative","response")]
   temp <- data.frame(temp[seq(1,nrow(temp),by=2),],
