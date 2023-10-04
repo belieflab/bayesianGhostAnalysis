@@ -20,11 +20,11 @@ for (i in 1:length(subject)) {
                   "scramble","communicative","response","confidence")]
   # temp <- data.frame(temp[seq(1,nrow(temp),by=2),],
   #                    confidence=temp$response[seq(2,nrow(temp),by=2)])
-  temp$response <- c("",temp$response[1:(nrow(temp)-1)])
+  temp$response <- c(NA,temp$response[1:(nrow(temp)-1)])
   temp <- temp[!is.na(temp$confidence),]
-  colnames(temp)[c(-3:-8)] <- c("video","trial","detection","confidence")
-  temp$detection <- ifelse(temp$detection=="yes",1,0)
-  temp$confidence <- as.integer(temp$confidence)
+  colnames(temp) <- c("video","trial","workerId","interview_date","noise","action",
+                      "scramble","communicative","response","confidence")
+  temp$detection <- ifelse(temp$response=="yes",1,0)
   temp$correct <- ifelse((1-temp$scramble)==temp$detection,1,0)
   if (i == 1) {
     db <- temp
