@@ -1,0 +1,2 @@
+StudyId,ProjectName,Tags,AssignmentApprovalType,AverageTime,MedianTime,ExpectedTime,MaximumTime,CompletionRate,BounceRate,CompletedWorkers,ApprovedWorkers,CreationTime,RunTime,Owner,EstimatedCostAmazon,EstimatedCostProFeatures,TotalCost
+0,,,Manual Approval,25.5,25.5,30,360,100 %,0 %,1,0,10/03/2023 20:38:53,10/03/23 9:00PM-10/24/23 9:00PM,COMPPSYCHRESGROUP@GMAIL.COM,7.20,0.00,7.20

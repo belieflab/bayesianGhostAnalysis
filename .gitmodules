@@ -1,0 +1,6 @@
+[submodule "api"]
+	path = api
+	url = git@github.com:belieflab/api.git
+[submodule "clean"]
+	path = clean
+	url = git@github.com:CAPR-Consortium/clean.git

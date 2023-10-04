@@ -1,0 +1,2 @@
+SurveyId,AmazonIdentifier,AssignmentId,DurationInSeconds,StartTime,CompletionTime,ApprovalStatus,AmountPaid,AmountBonused,Estimated CloudResearch Fee,Actual Completion Code,,Gender,GenderConsistency,Feedback
+431225,A11F3MA5FWH6SJ,3YDTZAI2WFP4Y8IIZJBJ8560CLA14J,1532,10/3/2023 9:00:13 PM,10/3/2023 9:25:45 PM,Pending,0.00,0.00,1.200000,42536966,,Male,100.00 %,

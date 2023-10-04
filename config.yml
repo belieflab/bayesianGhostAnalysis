@@ -1,0 +1,4 @@
+default:
+  study_alias: templeton
+  qualtrics:
+    survey_ids: "surveyIds.R"
