@@ -3,6 +3,7 @@ source("api/getTask.R")
 
 # get qualtrics
 qualtrics <- getSurvey("ghost") # name is found in surveyIds.R
+qualtrics$survey_duration <- qualtrics$EndDate - qualtrics$StartDate
 
 # get merged behaviour 
 behaviour <- getTask("ghost", "workerId") # name is found in mongo collections
@@ -13,8 +14,10 @@ subject <- unique(behaviour$workerId)
 # loop subjects to get task duration 
 for (i in 1:length(subject)) {
   temp <- behaviour[behaviour$workerId == subject[i],]
-  # duration in minutes
-  duration <- (max(temp$time_elapsed)/1000)/60
+  # task duration in minutes
+  task_duration <- (max(temp$time_elapsed)/1000)/60
+  # survey duration in minutes
+  survey_duration <- qualtrics$survey_duration[qualtrics$workerId == subject[i]]
   # filter relevant columns
   temp <- temp[,c("stim","index","workerId","interview_date","noise","action",
                   "scramble","communicative","response","confidence")]
@@ -28,8 +31,14 @@ for (i in 1:length(subject)) {
   temp$correct <- ifelse((1-temp$scramble)==temp$detection,1,0)
   if (i == 1) {
     db <- temp
+    genChar <- data.frame(workerId=subject[i],interview_date=temp$interview_date[1],
+                          task_duration=task_duration,
+                          survey_duration=survey_duration)
   } else {
     db <- rbind(db,temp)
+    genChar <- rbind(genChar,data.frame(workerId=subject[i],interview_date=temp$interview_date[1],
+                                        task_duration=task_duration,
+                                        survey_duration=survey_duration))
   }
 }
 
