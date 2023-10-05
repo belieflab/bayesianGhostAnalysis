@@ -12,6 +12,9 @@ dataFiles <- dataFiles[grepl(".csv",dataFiles)]
 
 # read all subjects 
 db_raw <- lapply(paste0(dataLocation,dataFiles), read.csv)
+db <- dplyr::bind_rows(db_raw)
+source("function.R")
+raw<-rawPooler(dataLocation)
 for (i in 1:length(dataFiles)) {
   temp <- db_raw[[i]]
   # duration in minutes
@@ -50,6 +53,7 @@ table(db$detection)
 hist(db$confidence)
 ggplot(db, aes(x=scramble,y=detection)) + stat_summary()
 ggplot(db, aes(x=communicative,y=detection,col=as.factor(scramble))) + stat_summary()
+ggplot(db, aes(x=communicative,y=confidence,col=as.factor(scramble))) + stat_summary()
 ggplot(db, aes(x=scramble,y=confidence)) + stat_summary()
 ggplot(db, aes(x=detection,y=confidence)) + stat_summary()
 ggplot(db, aes(x=confidence,y=detection)) + stat_summary()
