@@ -54,3 +54,112 @@ scoreQuestionnaire <- function(qualtrics) {
   # return
   return(qualtrics)
 }
+
+prepareDataForAnalysis <- function (behaviour, qualtrics) {
+  # create subjects vector
+  subject <- unique(behaviour$workerId)
+  
+  # loop subjects to get task duration 
+  for (i in 1:length(subject)) {
+    temp <- behaviour[behaviour$workerId == subject[i],]
+    # task duration in minutes
+    # task_duration <- (max(temp$time_elapsed)/1000)/60
+    task_duration <- NA
+    # get subject i qualtrics scores
+    questTemp <- qualtrics[qualtrics$workerId == subject[i],]
+    # survey duration in minutes
+    survey_duration <- questTemp$survey_duration
+    # filter relevant columns
+    temp <- temp[,c("video","trial","workerId","interview_date","noise","action",
+                    "scramble","communicative","response","confidence")]
+    # create SDT cells
+    temp$cells <- factor(paste0(temp$scramble,temp$response),
+                         levels=c("0yes","1yes","0no","1no"))
+    # correct label them: hit, false alarm, miss, correct rejection
+    levels(temp$cells) <- c("Hit","FA","Ms","CR")
+    
+    # get SDT parameters for COM and IND trials
+    COM <- temp[temp$communicative == 1,]
+    COM <- sdtModel(COM, events = c("Hit","FA","Ms","CR"))
+    IND <- temp[temp$communicative == 0,]
+    IND <- sdtModel(IND, events = c("Hit","FA","Ms","CR"))
+    
+    # temp <- temp[,c("stim","index","workerId","interview_date","noise","action",
+    #                 "scramble","communicative","response","confidence")]
+    # temp <- data.frame(temp[seq(1,nrow(temp),by=2),],
+    #                    confidence=temp$response[seq(2,nrow(temp),by=2)])
+    # temp$response <- c(NA,temp$response[1:(nrow(temp)-1)])
+    # temp <- temp[!is.na(temp$confidence),]
+    # colnames(temp) <- c("video","trial","workerId","interview_date","noise","action",
+    #                     "scramble","communicative","response","confidence")
+    # detection binary variable
+    temp$detection <- ifelse(temp$response=="yes",1,0)
+    # correct binary variable
+    lf$correct <- ifelse((1-lf$scramble) == lf$detection,1,0)
+    # trial type based on "Seeing Bayesian Ghost" from Lisa.
+    lf$trial_type <- as.factor(paste0(lf$scramble,lf$communicative))
+    levels(lf$trial_type) = c("Signal_IND","Signal_COM","Noise_IND","Noise_COM")
+    
+    if (i == 1) {
+      lf <- data.frame(temp,bpe=questTemp$bpe,
+                       referential_dich=questTemp$referential_dich,
+                       persecution_dich=questTemp$persecution_dich,
+                       paranoia_dich=questTemp$paranoia_dich)
+      wf <- data.frame(workerId=subject[i],interview_date=temp$interview_date[1],
+                       task_duration=task_duration,
+                       survey_duration=survey_duration,
+                       com_dprime=COM$sensitivity,
+                       com_c=COM$response_criterion,
+                       ind_dprime=IND$sensitivity,
+                       ind_c=IND$response_criterion,
+                       referential_dich=questTemp$referential_dich,
+                       persecution_dich=questTemp$persecution_dich,
+                       paranoia_dich=questTemp$paranoia_dich)
+    } else {
+      lf <- rbind(lf,data.frame(temp,bpe=questTemp$bpe,
+                                referential_dich=questTemp$referential_dich,
+                                persecution_dich=questTemp$persecution_dich,
+                                paranoia_dich=questTemp$paranoia_dich))
+      wf <- rbind(wf,data.frame(workerId=subject[i],interview_date=temp$interview_date[1],
+                                task_duration=task_duration,
+                                survey_duration=survey_duration,
+                                com_dprime=COM$sensitivity,
+                                com_c=COM$response_criterion,
+                                ind_dprime=IND$sensitivity,
+                                ind_c=IND$response_criterion,
+                                referential_dich=questTemp$referential_dich,
+                                persecution_dich=questTemp$persecution_dich,
+                                paranoia_dich=questTemp$paranoia_dich))
+    }
+  }
+  # function output 
+  return(list(lf=lf,wf=wf))
+}
+
+sdtModel <- function (data, events) {
+  # NOTE: events must be ordered as follows: hit, FA, Ms, CR
+  # SDT cell frequencies 
+  sdtTable <- colSums(data$cells==t(matrix(rep(events,nrow(data)),ncol=nrow(data))))
+  hit_rate <- sdtTable[1]/(sdtTable[1]+sdtTable[3])
+  fa_rate <- sdtTable[2]/(sdtTable[2]+sdtTable[4])
+  # http://wise.cgu.edu/wise-tutorials/tutorial-signal-detection-theory/signal-detection-d-defined-2/
+  if (hit_rate == 0 | is.nan(hit_rate)) {
+    hit_rate <- 1/nrow(data)
+  } else if (hit_rate == 1) {
+    hit_rate <- (nrow(data)-1)/nrow(data)
+  }
+  if (fa_rate == 0 | is.nan(fa_rate)) {
+    fa_rate <- 1/nrow(data)
+  } else if (fa_rate == 1) {
+    fa_rate <- (nrow(data)-1)/nrow(data)
+  }
+  # sensitivity (d')
+  sensitivity <- qnorm(hit_rate) - qnorm(fa_rate)
+  # response criterion
+  response_criterion  <- -1*(qnorm(hit_rate) + qnorm(fa_rate)) / 2
+  # prepare output
+  names(sdtTable) <- events
+  # return list
+  return(list(sensitivity=sensitivity,response_criterion=response_criterion,
+              sdtTable=sdtTable,hit_rate=hit_rate,fa_rate=fa_rate))
+}

@@ -41,7 +41,7 @@ for (i in 1:length(dataFiles)) {
 db$video <- basename(db$video)
 db <- db[,c("interview_date","workerId","video","trial","noise","action","scramble",
             "communicative","response","confidence","detection","correct")]
-write.csv(db,"../data/pooledData.csv",row.names = F)
+write.csv(raw,"../data/pooledData.csv",row.names = F)
 
 
 
