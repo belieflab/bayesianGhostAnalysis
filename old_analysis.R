@@ -5,6 +5,19 @@ rm(list=ls())
 # dataLocation <- "C:/Users/owner/Desktop/bayesianGhost/data/"
 dataLocation <- "../data/behaviour/"
 
+# check worker Ids and approved people
+dataFiles <- list.files("../data/")
+dataFiles <- dataFiles[grepl("bayesianGhost",dataFiles)]
+control <- lapply(paste0("../data/",dataFiles), read.csv)
+for (i in 1:3) {
+  if (i == 1) {
+    db <- control[[i]]
+    db$Actual.Completion.Code[1] <- "42536966"
+  } else {
+    db <- rbind(db,control[[i]])
+  }
+}
+
 # get csv files names
 dataFiles <- list.files(dataLocation)
 dataFiles <- dataFiles[grepl(".csv",dataFiles)]
@@ -13,6 +26,7 @@ dataFiles <- dataFiles[grepl(".csv",dataFiles)]
 # read all subjects 
 db_raw <- lapply(paste0(dataLocation,dataFiles), read.csv)
 db <- dplyr::bind_rows(db_raw)
+raw<-rawPooler(dataLocation)
 source("function.R")
 raw<-rawPooler(dataLocation)
 for (i in 1:length(dataFiles)) {
