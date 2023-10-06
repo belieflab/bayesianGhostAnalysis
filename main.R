@@ -2,7 +2,7 @@ source("api/getSurvey.R")
 source("api/getTask.R")
 
 # get qualtrics
-qualtrics <- getSurvey("ghost", TRUE) # name is found in surveyIds.R
+qualtrics <- getSurvey("ghost", label = TRUE) # name is found in surveyIds.R
 qualtrics$survey_duration <- qualtrics$EndDate - qualtrics$StartDate
 
 source("function.R")
