@@ -1,3 +1,4 @@
+# combine multiple files in the same location (file must have the same columns) 
 rawPooler <- function (data_location = NULL) {
   # get all files names from location
   data_files <- list.files(data_location)
@@ -11,7 +12,7 @@ rawPooler <- function (data_location = NULL) {
   return(raw_data_dataframe)
 }
 
-# check cloudResearch completion code csv
+# check cloudResearch completion code csvs and tells you good and bad workerdIds
 cloudResearchControl <- function(completion_code) {
   files <- list.files("cloudResearch/")
   control <- lapply(paste0("cloudResearch/",files), read.csv)
@@ -38,6 +39,7 @@ cloudResearchControl <- function(completion_code) {
   return(list(goodIds=goodIds,badIds=badIds))
 }
 
+# score qualtrics questionnaires
 scoreQuestionnaire <- function(qualtrics) {
   # as data frame
   qualtrics <- as.data.frame(qualtrics)
@@ -83,6 +85,7 @@ scoreQuestionnaire <- function(qualtrics) {
   return(qualtrics)
 }
 
+# clean use the output from rawPooler and clean it
 cleanBehaviour <- function(behaviour) {
   # create subjects vector
   subject <- unique(behaviour$workerId)
@@ -114,6 +117,7 @@ cleanBehaviour <- function(behaviour) {
   return(db)
 }
 
+# combine behaviour and qualtrics data.frames
 prepareDataForAnalysis <- function (behaviour, qualtrics) {
   # create subjects vector
   subject <- unique(behaviour$workerId)
@@ -123,7 +127,6 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
     temp <- behaviour[behaviour$workerId == subject[i],]
     # task duration in minutes
     task_duration <- (max(temp$time_elapsed)/1000)/60
-    # task_duration <- NA
     # get subject i qualtrics scores
     questTemp <- qualtrics[qualtrics$workerId == subject[i],]
     # survey duration in minutes
@@ -144,14 +147,6 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
     IND <- temp[temp$communicative == 0,]
     IND <- sdtModel(IND, events = c("Hit","FA","Ms","CR"))
     
-    # temp <- temp[,c("stim","index","workerId","interview_date","noise","action",
-    #                 "scramble","communicative","response","confidence")]
-    # temp <- data.frame(temp[seq(1,nrow(temp),by=2),],
-    #                    confidence=temp$response[seq(2,nrow(temp),by=2)])
-    # temp$response <- c(NA,temp$response[1:(nrow(temp)-1)])
-    # temp <- temp[!is.na(temp$confidence),]
-    # colnames(temp) <- c("video","trial","workerId","interview_date","noise","action",
-    #                     "scramble","communicative","response","confidence")
     # detection binary variable
     temp$detection <- ifelse(temp$response=="yes",1,0)
     # correct binary variable
@@ -166,6 +161,11 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
                        referential_dich=questTemp$referential_dich,
                        persecution_dich=questTemp$persecution_dich,
                        paranoia_dich=questTemp$paranoia_dich)
+      lwf <- data.frame(workerId=subject[i],
+                        paranoia_dich=questTemp$paranoia_dich,
+                        action=rep(c("COM","IND"),each=4),
+                        cells=names(c(COM$sdtTable,IND$sdtTable)),
+                        freq=c(COM$sdtTable,IND$sdtTable))
       wf <- data.frame(workerId=subject[i],interview_date=temp$interview_date[1],
                        task_duration=task_duration,
                        survey_duration=survey_duration,
@@ -189,6 +189,11 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
                                 referential_dich=questTemp$referential_dich,
                                 persecution_dich=questTemp$persecution_dich,
                                 paranoia_dich=questTemp$paranoia_dich))
+      lwf <- rbind(lwf,data.frame(workerId=subject[i],
+                                  paranoia_dich=questTemp$paranoia_dich,
+                                  action=rep(c("COM","IND"),each=4),
+                                  cells=names(c(COM$sdtTable,IND$sdtTable)),
+                                  freq=c(COM$sdtTable,IND$sdtTable)))
       wf <- rbind(wf, wf <- data.frame(workerId=subject[i],interview_date=temp$interview_date[1],
                                        task_duration=task_duration,
                                        survey_duration=survey_duration,
@@ -210,15 +215,16 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
     }
   }
   # function output 
-  return(list(lf=lf,wf=wf))
+  return(list(lf=lf,lwf=lwf,wf=wf))
 }
 
+# use sdt classical metrics to a dataset
 sdtModel <- function (data, events) {
   # NOTE: events must be ordered as follows: hit, FA, Ms, CR
   # SDT cell frequencies 
   sdtTable <- colSums(data$cells==t(matrix(rep(events,nrow(data)),ncol=nrow(data))))
-  hit_rate <- sdtTable[1]/(sdtTable[1]+sdtTable[3])
-  fa_rate <- sdtTable[2]/(sdtTable[2]+sdtTable[4])
+  hit_rate <- sdtTable[1]/(sdtTable[1]+sdtTable[3]) # p(detection|signal)
+  fa_rate <- sdtTable[2]/(sdtTable[2]+sdtTable[4]) # p(detection|noise)
   # http://wise.cgu.edu/wise-tutorials/tutorial-signal-detection-theory/signal-detection-d-defined-2/
   if (hit_rate == 0 | is.nan(hit_rate)) {
     hit_rate <- 1/nrow(data)
