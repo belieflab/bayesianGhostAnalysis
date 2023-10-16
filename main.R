@@ -7,11 +7,7 @@ source("api/getTask.R")
 source("functions.R")
 
 # libraries needed (mostly for visualization)
-if (!require(ggplot2)) {install.packages("ggplot2")}; library(ggpubr)
-if (!require(ggplot2)) {install.packages("ggplot2")}; library(ggplot2)
-if (!require(reshape2)) {install.packages("reshape2")}; library(reshape2)
-if (!require(lmerTest)) {install.packages("lmerTest")}; library(lmerTest)
-if (!require(ggsignif)) {install.packages("ggsignif")}; library(ggsignif)
+loadPackages(libraries = c("ggplot2","ggpubr","reshape2","lmerTest","ggsignif"))
 
 # check participant status
 completion_code <- "42536966"
@@ -19,12 +15,16 @@ status <- cloudResearchControl(completion_code)
 
 # get qualtrics
 qualtrics <- getSurvey("ghost", label=T) # name is found in surveyIds.R
-qualtrics$survey_duration <- qualtrics$EndDate - qualtrics$StartDate
+# get survey_duration in minutes
+qualtrics$duration_minutes <- qualtrics$`Duration (in seconds)`/60
+# remove non valid workerIds and NAs
+qualtrics <- qualtrics[qualtrics$Progress==100,]
 
 # score questionnaires
-qualtrics <- scoreQuestionnaire(qualtrics)
+questionnaires <- scoreQuestionnaireAPI(qualtrics)
+# qualtrics <- scoreQuestionnaire(qualtrics)
 # write.csv(qualtrics,"../data/qualtrics.csv")
-qualtrics <- read.csv("../data/qualtrics.csv")
+# qualtrics <- read.csv("../data/qualtrics.csv")
 
 # get merged behaviour 
 behaviour <- getTask("ghost", "workerId") # name is found in mongo collections
@@ -32,7 +32,7 @@ behaviour <- getTask("ghost", "workerId") # name is found in mongo collections
 # clean behaviour
 behaviour <- cleanBehaviour(behaviour)
 # write.csv(behaviour,"../data/behaviour.csv")
-behaviour <- read.csv("../data/behaviour.csv")
+# behaviour <- read.csv("../data/behaviour.csv")
 
 # combine behaviour and questionnaire
 db <- prepareDataForAnalysis(behaviour, qualtrics)
@@ -40,23 +40,21 @@ lf <- db$lf
 lwf <- db$lwf
 wf <- db$wf
 
-# get frequencies by noise type
-noise5 <- prepareDataForAnalysis(behaviour[behaviour$noise==5,], qualtrics)$lwf
-noise5$noise<-5
-noise10 <- prepareDataForAnalysis(behaviour[behaviour$noise==10,], qualtrics)$lwf
-noise10$noise<-10
-noise20 <- prepareDataForAnalysis(behaviour[behaviour$noise==20,], qualtrics)$lwf
-noise20$noise<-20
-lwf <- rbind(noise5,noise10,noise20)
 
-# write.csv(lf,"../data/lf.csv")
-# write.csv(wf,"../data/wf.csv")
+
+# main hypothesis
+m1<-glmer(detection~paranoia_dich*communicative+(1|workerId),family=binomial,lf[lf$scramble==1,])
+summary(m1)
+lf$bpe_high <- ifelse(lf$bpe>median(lf$bpe),"high","low")
+m2<-glmer(detection~bpe_high*communicative+(1|workerId),family=binomial,lf[lf$scramble==1,])
+summary(m2)
 
 
 
-
-
-
+# Figure 1
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 # # # # Sensitivity # # # #
 # transform data
@@ -64,8 +62,8 @@ wf2 <- melt(wf,measure.vars = c("com_dprime","ind_dprime"))
 wf2$action <- substr(wf2$variable,1,3)
 # status
 mod1 <- lmer(value~action+(1|workerId),REML=F,wf2); summary(mod1)
-summary(lmer(value~action+(1|workerId),REML=F,wf2[wf2$paranoia_dich=="average",]))
-summary(lmer(value~action+(1|workerId),REML=F,wf2[wf2$paranoia_dich=="elevated",]))
+summary(lmer(value~action+(1|workerId),REML=F,wf2[wf2$paranoia_dich=="low",]))
+summary(lmer(value~action+(1|workerId),REML=F,wf2[wf2$paranoia_dich=="high",]))
 # get averages
 wft3 <- wf2 %>% group_by(action) %>% 
   summarise(mean=mean(value,na.rm=T),std=std(value,na.rm=T))
@@ -161,6 +159,169 @@ if (print_fig == 1) {
 
 
 
+# Figure 2
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# get frequencies by noise type
+noise5 <- prepareDataForAnalysis(behaviour[behaviour$noise==5,], qualtrics)$wf
+noise5$noise<-5
+noise10 <- prepareDataForAnalysis(behaviour[behaviour$noise==10,], qualtrics)$wf
+noise10$noise<-10
+noise20 <- prepareDataForAnalysis(behaviour[behaviour$noise==20,], qualtrics)$wf
+noise20$noise<-20
+wf <- rbind(noise5,noise10,noise20)
+wf$bpe_high <- ifelse(wf$bpe>median(wf$bpe),"high","low")
+wf$bpe_high <- factor(wf$bpe_high, levels = c("low","high"))
+wf$paranoia_dich <- factor(wf$paranoia_dich, levels = c("low","high"))
+
+
+ggplot(wf, aes(x=noise,y=pCorrect,col=paranoia_dich)) +
+  labs(y="p(correct)",x="noise", fill="Paranoia:") +
+  geom_hline(yintercept = 0.5) +
+  geom_boxplot(aes(group=interaction(paranoia_dich,as.factor(noise)))) +
+  stat_summary() +
+  stat_summary(geom = "line") +
+  theme_bw()
+ggplot(wf, aes(x=noise,y=pCorrect,col=bpe_high)) +
+  labs(y="p(correct)",x="noise", fill="Paranoia:") +
+  geom_hline(yintercept = 0.5) +
+  geom_boxplot(aes(group=interaction(bpe_high,as.factor(noise)))) +
+  stat_summary() +
+  stat_summary(geom = "line") +
+  theme_bw()
+
+
+
+# # # # Sensitivity # # # #
+# transform data
+wf2 <- melt(wf,measure.vars = c("com_dprime","ind_dprime"))
+wf2$action <- substr(wf2$variable,1,3)
+# status
+mod1 <- lmer(value~action*noise+(1|workerId),REML=F,wf2); summary(mod1)
+summary(lmer(value~action*noise+(1|workerId),REML=F,wf2[wf2$paranoia_dich=="low",]))
+summary(lmer(value~action*noise+(1|workerId),REML=F,wf2[wf2$paranoia_dich=="high",]))
+# get averages
+wft3 <- wf2 %>% group_by(action,paranoia_dich,noise) %>% 
+  summarise(mean=mean(value,na.rm=T),std=std(value,na.rm=T))
+wft3$action <- ifelse(wft3$action=="com","Communicative","Individual") 
+p1 <- ggplot(wft3, aes(x=action,y=mean,fill=action)) + 
+  labs(y="Sensitivity (d')",x="Interaction", fill="Rate:") +
+  geom_bar(stat="identity", color="black", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-std, ymax=mean+std), width=.2,
+                position=position_dodge(.9)) +
+  coord_cartesian(ylim = c(-0.1,1.2)) +
+  facet_grid(noise ~ paranoia_dich) +
+  theme_bw() + theme(axis.text.x = element_text(angle = 15, hjust = 1),
+                     legend.position = "none")
+p1
+
+# # # # Response Criterion # # # #
+# transform data
+wf2 <- melt(wf,measure.vars = c("com_c","ind_c"))
+wf2$action <- substr(wf2$variable,1,3)
+# stats
+mod2 <- lmer(value~action*noise+(1|workerId),REML=F,wf2); summary(mod2)
+# get averages
+wf3 <- wf2 %>% group_by(action,paranoia_dich,noise) %>% 
+  summarise(mean=mean(value,na.rm=T),std=std(value,na.rm=T))
+wf3$action <- ifelse(wf3$action=="com","Communicative","Individual") 
+p2 <- ggplot(wf3, aes(x=action,y=mean,fill=action)) + 
+  labs(y="Response Criterion (C)",x="Interaction",fill="Rate:") +
+  geom_bar(stat="identity", color="black", position=position_dodge()) +
+  geom_errorbar(aes(ymin=mean-std, ymax=mean+std), width=.2,
+                position=position_dodge(.9)) +
+  coord_cartesian(ylim = c(-0.3,0.65)) +
+  facet_grid(noise ~ paranoia_dich) +
+  theme_bw() + theme(axis.text.x = element_text(angle = 15, hjust = 1),
+                     legend.position = "none")
+p2
+
+fig2 <- ggarrange(p1,p2,ncol=2,labels = c("A","B"),align = "hv")
+
+print_fig <- 0
+if (print_fig == 1) {
+  ggsave("figures/figure2.png",
+         plot = fig2, width = 16, height = 12, units = "cm", dpi = 1800, 
+         limitsize = T)
+}
+
+
+wf2 <- melt(wf,measure.vars = c("com_dprime","ind_dprime"))
+wf2$action <- substr(wf2$variable,1,3)
+wf2$action <- ifelse(wf2$action=="com","Communicative","Individual") 
+p1 <- ggplot(wf2, aes(x=noise,y=value,col=paranoia_dich )) +
+  labs(y="d'",x="noise", col="Paranoia:") +
+  geom_hline(yintercept = 0) +
+  # geom_boxplot(aes(group=interaction(paranoia_dich,as.factor(noise))),alpha=0.5) +
+  stat_summary(position = position_dodge(2)) +
+  stat_summary(position = position_dodge(2),geom = "line") +
+  scale_x_continuous(breaks = c(5,10,20)) +
+  scale_color_manual(values = c("blue","red")) +
+  facet_grid(. ~ action) +
+  theme_bw()
+p2 <- ggplot(wf2, aes(x=noise,y=value,col=bpe_high)) +
+  labs(y="d'",x="noise", col="BPE:") +
+  geom_hline(yintercept = 0) +
+  # geom_boxplot(aes(group=interaction(bpe_high,as.factor(noise))),alpha=0.5) +
+  stat_summary(position = position_dodge(2)) +
+  stat_summary(position = position_dodge(2),geom = "line") +
+  scale_x_continuous(breaks = c(5,10,20)) +
+  scale_color_manual(values = c("green","orange")) +
+  facet_grid(. ~ action) +
+  theme_bw()
+
+wf2 <- melt(wf,measure.vars = c("com_c","ind_c"))
+wf2$action <- substr(wf2$variable,1,3)
+wf2$action <- ifelse(wf2$action=="com","Communicative","Individual") 
+p3 <- ggplot(wf2, aes(x=noise,y=value,col=paranoia_dich)) +
+  labs(y="C",x="noise", col="Paranoia:") +
+  geom_hline(yintercept = 0) +
+  # geom_boxplot(aes(group=interaction(paranoia_dich,as.factor(noise))),alpha=0.5) +
+  stat_summary(position = position_dodge(2)) +
+  stat_summary(position = position_dodge(2),geom = "line") +
+  scale_x_continuous(breaks = c(5,10,20)) +
+  scale_color_manual(values = c("blue","red")) +
+  facet_grid(. ~ action) +
+  theme_bw()
+p4 <- ggplot(wf2, aes(x=noise,y=value,col=bpe_high)) +
+  labs(y="C",x="noise", col="BPE:") +
+  geom_hline(yintercept = 0) +
+  # geom_boxplot(aes(group=interaction(bpe_high,as.factor(noise))),alpha=0.5) +
+  stat_summary(position = position_dodge(2)) +
+  stat_summary(position = position_dodge(2),geom = "line") +
+  scale_x_continuous(breaks = c(5,10,20)) +
+  scale_color_manual(values = c("green","orange")) +
+  facet_grid(. ~ action) +
+  theme_bw()
+
+fig2 <- ggarrange(ggarrange(p1,p3,ncol=2,labels = c("A","B"),align = "hv",
+                  common.legend = T),
+                  ggarrange(p2,p4,ncol=2,labels = c("C","D"),align = "hv",
+                            common.legend = T),nrow=2)
+fig2
+ggsave("figures/figure2_v2.png",
+       plot = fig2, width = 16, height = 12, units = "cm", dpi = 1800, 
+       limitsize = T)
+
+
+
+
+# Figure 3
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# get frequencies by noise type
+noise5 <- prepareDataForAnalysis(behaviour[behaviour$noise==5,], qualtrics)$lwf
+noise5$noise<-5
+noise10 <- prepareDataForAnalysis(behaviour[behaviour$noise==10,], qualtrics)$lwf
+noise10$noise<-10
+noise20 <- prepareDataForAnalysis(behaviour[behaviour$noise==20,], qualtrics)$lwf
+noise20$noise<-20
+lwf <- rbind(noise5,noise10,noise20)
+lwf$bpe_high <- ifelse(lwf$bpe>median(lwf$bpe),"high","low")
+lwf$bpe_high <- factor(lwf$bpe_high, levels = c("low","high"))
+lwf$paranoia_dich <- factor(lwf$paranoia_dich, levels = c("low","high"))
 
 # get averages
 summary(lmer(freq ~ action + (1|workerId),REML=F,lwf[lwf$cells=="Hit",]))
@@ -176,7 +337,7 @@ lwf3 <- lwf2 %>% group_by(paranoia_dich,action,cells,noise) %>%
 # lwf3$cells <- factor(lwf3$cells,levels = c("FA","CR"))
 lwf3$cells <- factor(lwf3$cells,levels = c("Hit","FA","Ms","CR"))#c("FA","CR","Hit","Ms")
 
-fig2 <- ggplot(lwf3, aes(x=action,y=mean,fill=cells)) + 
+fig3 <- ggplot(lwf3, aes(x=action,y=mean,fill=cells)) + 
   labs(y="Mean Frequency",x="Interaction",fill="Trial Type") +
   geom_bar(stat="identity", color="black", position=position_dodge()) +
   geom_errorbar(aes(ymin=mean-std, ymax=mean+std), width=.2,
@@ -186,19 +347,50 @@ fig2 <- ggplot(lwf3, aes(x=action,y=mean,fill=cells)) +
   scale_fill_manual(values = c("red","blue","grey","green")) +
   facet_grid(noise ~ paranoia_dich) +
   theme_bw() + theme(axis.text.x = element_text(angle = 15, hjust = 1))
-fig2
+fig3
 
 print_fig <- 0
 if (print_fig == 1) {
-  ggsave("figures/figure2.png",
-         plot = fig1, width = 12, height = 12, units = "cm", dpi = 1800, 
+  ggsave("figures/figure3.png",
+         plot = fig3, width = 12, height = 12, units = "cm", dpi = 1800, 
          limitsize = T)
 }
 
 
+
+lwf$cells <- factor(lwf$cells,levels = c("Hit","FA","Ms","CR"))#c("FA","CR","Hit","Ms")
+fig3.1 <- ggplot(lwf, aes(x=noise,y=freq,col=paranoia_dich)) + 
+  labs(y="Mean Frequency",x="Noise",col="Paranoia:") +
+  stat_summary() +
+  stat_summary(geom="line") +
+  scale_x_continuous(breaks = c(5,10,20)) +
+  scale_color_manual(values = c("blue","red")) +
+  facet_grid(action ~ cells) +
+  theme_bw()
+fig3.1
+fig3.2 <- ggplot(lwf, aes(x=noise,y=freq,col=bpe_high)) + 
+  labs(y="Mean Frequency",x="Noise",col="BPE:") +
+  stat_summary() +
+  stat_summary(geom="line") +
+  scale_x_continuous(breaks = c(5,10,20)) +
+  scale_color_manual(values = c("green","orange")) +
+  facet_grid(action ~ cells) +
+  theme_bw()
+fig3.2
+
+fig3 <- ggarrange(fig3.1,fig3.2,nrow=2,labels=c("A","B"),align = "hv")
+fig3
+ggsave("figures/figure3_v2.png",
+       plot = fig3, width = 12, height = 12, units = "cm", dpi = 1800, 
+       limitsize = T)
+
+
+
+
+
+
 mod <- lmer(value~action+(1|workerId),REML=F,wf2[wf2$rate == "fa",]); summary(mod)
 mod <- lmer(value~action+(1|workerId),REML=F,wf2[wf2$rate == "hit",]); summary(mod)
-
 p3 <- ggplot(wf3, aes(x=action,y=mean,fill=rate)) + 
   labs(y="Probability",x="Rate",fill="Rate:") +
   geom_bar(stat="identity", color="black", 

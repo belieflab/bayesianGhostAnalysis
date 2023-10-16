@@ -1,17 +1,3 @@
-# combine multiple files in the same location (file must have the same columns) 
-rawPooler <- function (data_location = NULL) {
-  # get all files names from location
-  data_files <- list.files(data_location)
-  # filter only by csvs
-  data_files <- data_files[grepl(".csv",data_files)]
-  # read all subjects in a list
-  raw_data_list <- lapply(paste0(data_location,data_files), read.csv)
-  # combine rbind elements within the list
-  raw_data_dataframe <- dplyr::bind_rows(raw_data_list)
-  # get output
-  return(raw_data_dataframe)
-}
-
 # check cloudResearch completion code csvs and tells you good and bad workerdIds
 cloudResearchControl <- function(completion_code) {
   files <- list.files("cloudResearch/")
@@ -34,6 +20,7 @@ cloudResearchControl <- function(completion_code) {
                  " participants are Not Submitted"))
   message(paste0(sum(bad$ApprovalStatus=="Pending"), 
                  " participants are bad and Pending"))
+  # preparing outputs
   goodIds <- good$AmazonIdentifier
   badIds <- bad$AmazonIdentifier[bad$ApprovalStatus=="Pending"]
   return(list(goodIds=goodIds,badIds=badIds))
@@ -49,21 +36,21 @@ scoreQuestionnaire <- function(qualtrics) {
   # reference (A)
   referential <- qualtrics[,grepl("rgpts_referential",colnames(qualtrics)),]
   # referential <- referential-1 # if qualtrics is imported as values and not strings
-  qualtrics$referential <- rowSums(referential)
+  # qualtrics$referential <- rowSums(referential)
   # qualtrics$referential - qualtrics$referential - ncol(referential) # if qualtrics is imported as values and not strings
-  qualtrics$referential_dich <- ifelse(qualtrics$referential <= 9,"average","elevated")
+  # qualtrics$referential_dich <- ifelse(qualtrics$referential <= 9,"average","elevated")
   # persecution (B)
   persecution <- qualtrics[,grepl("rgpts_persecution",colnames(qualtrics)),]
   # persecution <- persecution-1 # if qualtrics is imported as values and not strings
   qualtrics$persecution <- rowSums(persecution)
   # qualtrics$persecution - qualtrics$persecution - ncol(persecution) # if qualtrics is imported as values and not strings
-  qualtrics$persecution_dich <- ifelse(qualtrics$persecution <= 5,"average","elevated")
+  qualtrics$persecution_dich <- ifelse(qualtrics$persecution >10,"high","low")
   # paranoia (A+B)
-  qualtrics$paranoia <- qualtrics$referential + qualtrics$persecution
+  # qualtrics$paranoia <- qualtrics$referential + qualtrics$persecution
   # at least one subscale elevated
-  qualtrics$paranoia_dich <- ifelse(qualtrics$referential_dich == "elevated" |
-                                          qualtrics$persecution_dich == "elevated",
-                                        "elevated","average")
+  # qualtrics$paranoia_dich <- ifelse(qualtrics$referential_dich == "elevated" |
+  #                                         qualtrics$persecution_dich == "elevated",
+  #                                       "elevated","average")
   
   # # # # Beliefs in Purpose of Events # # # #
   # Lindeman, M., & Aarnio, K. (2007). Superstitious, magical, and paranormal beliefs: An integrative model. Journal of research in Personality, 41(4), 731-744.
@@ -158,11 +145,9 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
     # combine multiple subjects
     if (i == 1) {
       lf <- data.frame(temp,bpe=questTemp$bpe,
-                       referential_dich=questTemp$referential_dich,
-                       persecution_dich=questTemp$persecution_dich,
-                       paranoia_dich=questTemp$paranoia_dich)
-      lwf <- data.frame(workerId=subject[i],
-                        paranoia_dich=questTemp$paranoia_dich,
+                       paranoia_dich=questTemp$persecution_dich)
+      lwf <- data.frame(workerId=subject[i],bpe=questTemp$bpe,
+                        paranoia_dich=questTemp$persecution_dich,
                         action=rep(c("COM","IND"),each=4),
                         cells=names(c(COM$sdtTable,IND$sdtTable)),
                         freq=c(COM$sdtTable,IND$sdtTable))
@@ -181,37 +166,33 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
                        ind_hit=IND$hit_rate,
                        ind_fa=IND$fa_rate,
                        # questionnaires
-                       referential_dich=questTemp$referential_dich,
-                       persecution_dich=questTemp$persecution_dich,
-                       paranoia_dich=questTemp$paranoia_dich)
+                       bpe=questTemp$bpe,
+                       paranoia_dich=questTemp$persecution_dich)
     } else {
       lf <- rbind(lf,data.frame(temp,bpe=questTemp$bpe,
-                                referential_dich=questTemp$referential_dich,
-                                persecution_dich=questTemp$persecution_dich,
-                                paranoia_dich=questTemp$paranoia_dich))
-      lwf <- rbind(lwf,data.frame(workerId=subject[i],
-                                  paranoia_dich=questTemp$paranoia_dich,
+                                paranoia_dich=questTemp$persecution_dich))
+      lwf <- rbind(lwf,data.frame(workerId=subject[i],bpe=questTemp$bpe,
+                                  paranoia_dich=questTemp$persecution_dich,
                                   action=rep(c("COM","IND"),each=4),
                                   cells=names(c(COM$sdtTable,IND$sdtTable)),
                                   freq=c(COM$sdtTable,IND$sdtTable)))
-      wf <- rbind(wf, wf <- data.frame(workerId=subject[i],interview_date=temp$interview_date[1],
-                                       task_duration=task_duration,
-                                       survey_duration=survey_duration,
-                                       pCorrect=mean(temp$correct,na.rm = T),
-                                       # communicative
-                                       com_dprime=COM$sensitivity,
-                                       com_c=COM$response_criterion,
-                                       com_hit=COM$hit_rate,
-                                       com_fa=COM$fa_rate,
-                                       # individual
-                                       ind_dprime=IND$sensitivity,
-                                       ind_c=IND$response_criterion,
-                                       ind_hit=IND$hit_rate,
-                                       ind_fa=IND$fa_rate,
-                                       # questionnaires
-                                       referential_dich=questTemp$referential_dich,
-                                       persecution_dich=questTemp$persecution_dich,
-                                       paranoia_dich=questTemp$paranoia_dich))
+      wf <- rbind(wf,data.frame(workerId=subject[i],interview_date=temp$interview_date[1],
+                                task_duration=task_duration,
+                                survey_duration=survey_duration,
+                                pCorrect=mean(temp$correct,na.rm = T),
+                                # communicative
+                                com_dprime=COM$sensitivity,
+                                com_c=COM$response_criterion,
+                                com_hit=COM$hit_rate,
+                                com_fa=COM$fa_rate,
+                                # individual
+                                ind_dprime=IND$sensitivity,
+                                ind_c=IND$response_criterion,
+                                ind_hit=IND$hit_rate,
+                                ind_fa=IND$fa_rate,
+                                # questionnaires
+                                bpe=questTemp$bpe,
+                                paranoia_dich=questTemp$persecution_dich))
     }
   }
   # function output 
@@ -249,3 +230,23 @@ sdtModel <- function (data, events) {
 
 # function for standard error
 std <- function(x,na.rm) sd(x,na.rm=na.rm)/sqrt(length(x))
+
+
+
+# score qualtrics questionnaires
+scoreQuestionnaireAPI <- function(qualtrics) {
+  # as data frame
+  qualtrics <- as.data.frame(qualtrics)
+  
+  # # # # Revised Green Paranoid Thought Scale # # # #
+  # relevant column names
+  rel_columns <- colnames(qualtrics)[grepl("rgpts_",colnames(qualtrics))]
+  rel_columns <- c("workerId",rel_columns)
+  # get columns names
+  rgpts <- qualtrics[,rel_columns]
+  # generate rgpts_clean
+  source("clean/qualtrics/complete/rgpts.R")
+  
+  # return
+  return(rgpts_clean)
+}
