@@ -68,6 +68,9 @@ scoreQuestionnaire <- function(qualtrics) {
   # sum all items  
   qualtrics$pdi <- rowSums(pdi,na.rm=T)/length(cols_pdi)
   
+  # # # # Death Anxiety Beliefs and Behaviours Scale # # # #
+  
+  
   # return
   return(qualtrics)
 }
@@ -117,7 +120,7 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
     # get subject i qualtrics scores
     questTemp <- qualtrics[qualtrics$workerId == subject[i],]
     # survey duration in minutes
-    survey_duration <- questTemp$survey_duration
+    survey_duration <- questTemp$duration_minutes
     # filter relevant columns
     temp <- temp[,c("video","trial","workerId","interview_date","noise","action",
                     "scramble","communicative","response","confidence")]

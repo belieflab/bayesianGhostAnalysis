@@ -21,7 +21,8 @@ qualtrics$duration_minutes <- qualtrics$`Duration (in seconds)`/60
 qualtrics <- qualtrics[qualtrics$Progress==100,]
 
 # score questionnaires
-questionnaires <- scoreQuestionnaireAPI(qualtrics)
+# questionnaires <- scoreQuestionnaireAPI(qualtrics)
+qualtrics <- scoreQuestionnaire(qualtrics)
 # qualtrics <- scoreQuestionnaire(qualtrics)
 # write.csv(qualtrics,"../data/qualtrics.csv")
 # qualtrics <- read.csv("../data/qualtrics.csv")
@@ -40,9 +41,20 @@ lf <- db$lf
 lwf <- db$lwf
 wf <- db$wf
 
+# meaning of columns
+# video name, trial number, worker id, intervew date, noise (how many noise dots there 
+# were in this trial), action (is the action type based on the word document called: 
+# specSheet_seeingGhost_v1.docx), scramble (if the dots are scramble or not, if positive 
+# then there is no identifiable agent in the cloud of dots), communicative (if the 
+# action was communicative or not), response (what did participants responded, yes = they 
+# a second agent or no), confidence (how confidence they were in their response),
+# cell (from signal detection theory), detection (is response but binary {0,1}), 
+# correct, trial_type (if there was noise or signal and communicative or individual action),
+# bpe (beliefs in purpose of events), paranoia_dich (high or low paranoia based on rgpts).
 
 
 # main hypothesis
+library(lmerTest)
 m1<-glmer(detection~paranoia_dich*communicative+(1|workerId),family=binomial,lf[lf$scramble==1,])
 summary(m1)
 lf$bpe_high <- ifelse(lf$bpe>median(lf$bpe),"high","low")
@@ -58,6 +70,7 @@ summary(m2)
 
 # # # # Sensitivity # # # #
 # transform data
+library(reshape2)
 wf2 <- melt(wf,measure.vars = c("com_dprime","ind_dprime"))
 wf2$action <- substr(wf2$variable,1,3)
 # status
@@ -68,6 +81,7 @@ summary(lmer(value~action+(1|workerId),REML=F,wf2[wf2$paranoia_dich=="high",]))
 wft3 <- wf2 %>% group_by(action) %>% 
   summarise(mean=mean(value,na.rm=T),std=std(value,na.rm=T))
 wft3$action <- ifelse(wft3$action=="com","Communicative","Individual") 
+library(ggplot2); library(ggpubr)
 p1 <- ggplot(wft3, aes(x=action,y=mean,fill=action)) + 
   labs(y="Sensitivity (d')",x="Interaction", fill="Rate:") +
   geom_bar(stat="identity", color="black", position=position_dodge()) +
