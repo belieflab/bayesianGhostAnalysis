@@ -69,8 +69,18 @@ scoreQuestionnaire <- function(qualtrics) {
   qualtrics$pdi <- rowSums(pdi,na.rm=T)/length(cols_pdi)
   
   # # # # Death Anxiety Beliefs and Behaviours Scale # # # #
-  
-  
+  # identify all columns from the questionnaire
+  cols_dabbs <- colnames(qualtrics)[grepl("dabbs",colnames(qualtrics))]
+  # transform responses from character to numeric
+  for (i in 1:length(cols_dabbs)) {
+    qualtrics[,cols_dabbs[i]] <- as.numeric(gsub("\\D", "", qualtrics[,cols_dabbs[i]]))
+  }
+  # identify columns from the fear subscale
+  cols_fear <- colnames(qualtrics)[grepl("dabbs_fear",colnames(qualtrics))]
+  # get the average of fear columns
+  qualtrics$dabbs_fear <- rowMeans(qualtrics[,cols_fear])
+  # your task will be to get the subscales for tba and avoid
+
   # return
   return(qualtrics)
 }
@@ -234,8 +244,6 @@ sdtModel <- function (data, events) {
 # function for standard error
 std <- function(x,na.rm) sd(x,na.rm=na.rm)/sqrt(length(x))
 
-
-
 # score qualtrics questionnaires
 scoreQuestionnaireAPI <- function(qualtrics) {
   # as data frame
@@ -252,4 +260,18 @@ scoreQuestionnaireAPI <- function(qualtrics) {
   
   # return
   return(rgpts_clean)
+}
+
+# combine multiple files in the same location (file must have the same columns) 
+rawPooler <- function (data_location = NULL) {
+  # get all files names from location
+  data_files <- list.files(data_location)
+  # filter only by csvs
+  data_files <- data_files[grepl(".csv",data_files)]
+  # read all subjects in a list
+  raw_data_list <- lapply(paste0(data_location,data_files), read.csv)
+  # combine rbind elements within the list
+  raw_data_dataframe <- dplyr::bind_rows(raw_data_list)
+  # get output
+  return(raw_data_dataframe)
 }
