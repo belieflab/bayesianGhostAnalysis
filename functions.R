@@ -79,6 +79,16 @@ scoreQuestionnaire <- function(qualtrics) {
   cols_fear <- colnames(qualtrics)[grepl("dabbs_fear",colnames(qualtrics))]
   # get the average of fear columns
   qualtrics$dabbs_fear <- rowMeans(qualtrics[,cols_fear])
+  
+  # identify columns from the tba subscale
+  cols_tba <- colnames(qualtrics)[grepl("dabbs_tba",colnames(qualtrics))]
+  # get the average of tba columns
+  qualtrics$dabbs_tba <- rowMeans(qualtrics[,cols_tba])
+
+  # identify columns from the avoid subscale
+  cols_avoid <- colnames(qualtrics)[grepl("dabbs_avoid",colnames(qualtrics))]
+  # get the average of avoid columns
+  qualtrics$dabbs_behaviors <- rowMeans(qualtrics[,cols_avoid])
   # your task will be to get the subscales for tba and avoid
 
   # return
