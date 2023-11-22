@@ -28,8 +28,8 @@ qualtrics <- as.data.frame(qualtrics)
 # identify all columns from the questionnaire
 dabbs <- data.frame(workerId=qualtrics$workerId, qualtrics[,grepl("dabbs",names(qualtrics))])
 
-dabbs$dabbs_fear_total <- rowSums(dabbs_fear[, grepl("fear", names(dabbs))])
-
+dabbs$dabbs_fear_total <- rowSums(dabbs[, grepl("fear", names(dabbs))])
+hist(dabbs$dabbs_fear_total)
 # get the sum of fear columns
 qualtrics$dabbs_fear <- rowSum(qualtrics[,cols_fear])
 # your task will be to get the subscales for tba and avoid

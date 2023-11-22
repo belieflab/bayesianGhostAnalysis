@@ -55,11 +55,18 @@ wf <- db$wf
 
 # main hypothesis
 library(lmerTest)
-m1<-glmer(detection~paranoia_dich*communicative+(1|workerId),family=binomial,lf[lf$scramble==1,])
+m1 <- glmer(detection ~ paranoia_dich * communicative + (1|workerId), family=binomial, lf[lf$scramble==1,])
 summary(m1)
-lf$bpe_high <- ifelse(lf$bpe>median(lf$bpe),"high","low")
-m2<-glmer(detection~bpe_high*communicative+(1|workerId),family=binomial,lf[lf$scramble==1,])
+
+# lf$bpe_high <- ifelse(lf$bpe > median(lf$bpe), "high", "low")
+m2 <- glmer(detection ~ bpe * communicative + (1|workerId), family=binomial, lf[lf$scramble==1,])
 summary(m2)
+
+# lf$dabbs_fear_high <- ifelse(lf$dabbs_fear > median(lf$dabbs_fear), "high", "low")
+m3 <- glmer(detection ~ dabbs_fear * communicative+(1|workerId), family=binomial, lf[lf$scramble==1,])
+summary(m3)
+
+# task for grace, would be to build the model4 (dabbs_tba) and model5 (dabbs_behaviours)
 
 
 
@@ -68,7 +75,7 @@ summary(m2)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# # # # Sensitivity # # # #
+# # # # Sensitivity (d') # # # #
 # transform data
 library(reshape2)
 wf2 <- melt(wf,measure.vars = c("com_dprime","ind_dprime"))
@@ -97,7 +104,7 @@ p1
 
 
 
-# # # # Response Criterion # # # #
+# # # # Response Criterion (C) # # # #
 # transform data
 wf2 <- melt(wf,measure.vars = c("com_c","ind_c"))
 wf2$action <- substr(wf2$variable,1,3)
@@ -160,6 +167,7 @@ p3
 # combine plots 1 to 3
 fig1 <- ggarrange(ggarrange(p1,p2,ncol=2,labels = c("A","B")),
                   p3,nrow=2,labels = c("","C"))
+fig1
 summary(mod1)
 summary(mod2)
 summary(mod3)

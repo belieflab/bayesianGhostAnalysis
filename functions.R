@@ -71,25 +71,26 @@ scoreQuestionnaire <- function(qualtrics) {
   # # # # Death Anxiety Beliefs and Behaviours Scale # # # #
   # identify all columns from the questionnaire
   cols_dabbs <- colnames(qualtrics)[grepl("dabbs",colnames(qualtrics))]
+  # remove randomization order "FL_6_DO_dabbs"
+  cols_dabbs <- cols_dabbs[cols_dabbs != "FL_6_DO_dabbs"]
   # transform responses from character to numeric
   for (i in 1:length(cols_dabbs)) {
     qualtrics[,cols_dabbs[i]] <- as.numeric(gsub("\\D", "", qualtrics[,cols_dabbs[i]]))
   }
   # identify columns from the fear subscale
-  cols_fear <- colnames(qualtrics)[grepl("dabbs_fear",colnames(qualtrics))]
+  cols_fear <- colnames(qualtrics)[grepl("dabbs_fear", colnames(qualtrics))]
   # get the average of fear columns
   qualtrics$dabbs_fear <- rowMeans(qualtrics[,cols_fear])
   
   # identify columns from the tba subscale
-  cols_tba <- colnames(qualtrics)[grepl("dabbs_tba",colnames(qualtrics))]
+  cols_tba <- colnames(qualtrics)[grepl("dabbs_tba", colnames(qualtrics))]
   # get the average of tba columns
-  qualtrics$dabbs_tba <- rowMeans(qualtrics[,cols_tba])
+  qualtrics$dabbs_tba <- rowMeans(qualtrics[, cols_tba])
 
   # identify columns from the avoid subscale
-  cols_avoid <- colnames(qualtrics)[grepl("dabbs_avoid",colnames(qualtrics))]
+  cols_avoid <- colnames(qualtrics)[grepl("dabbs_avoid", colnames(qualtrics))]
   # get the average of avoid columns
-  qualtrics$dabbs_behaviors <- rowMeans(qualtrics[,cols_avoid])
-  # your task will be to get the subscales for tba and avoid
+  qualtrics$dabbs_behaviors <- rowMeans(qualtrics[, cols_avoid])
 
   # return
   return(qualtrics)
@@ -144,7 +145,7 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
     # filter relevant columns
     temp <- temp[,c("video","trial","workerId","interview_date","noise","action",
                     "scramble","communicative","response","confidence")]
-    # create SDT cells
+    # create Signal Detection Theory (SDT) cells
     temp$cells <- factor(paste0(temp$scramble,temp$response),
                          levels=c("0yes","1yes","0no","1no"))
     # correct label them: hit, false alarm, miss, correct rejection
@@ -168,7 +169,8 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
     # combine multiple subjects
     if (i == 1) {
       lf <- data.frame(temp,bpe=questTemp$bpe,
-                       paranoia_dich=questTemp$persecution_dich)
+                       paranoia_dich=questTemp$persecution_dich,
+                       dabbs_fear=questTemp$dabbs_fear) # Grace & Santiago (22/11/2023)
       lwf <- data.frame(workerId=subject[i],bpe=questTemp$bpe,
                         paranoia_dich=questTemp$persecution_dich,
                         action=rep(c("COM","IND"),each=4),
@@ -193,7 +195,8 @@ prepareDataForAnalysis <- function (behaviour, qualtrics) {
                        paranoia_dich=questTemp$persecution_dich)
     } else {
       lf <- rbind(lf,data.frame(temp,bpe=questTemp$bpe,
-                                paranoia_dich=questTemp$persecution_dich))
+                                paranoia_dich=questTemp$persecution_dich,
+                                dabbs_fear=questTemp$dabbs_fear)) # Grace & Santiago (22/11/2023)
       lwf <- rbind(lwf,data.frame(workerId=subject[i],bpe=questTemp$bpe,
                                   paranoia_dich=questTemp$persecution_dich,
                                   action=rep(c("COM","IND"),each=4),
