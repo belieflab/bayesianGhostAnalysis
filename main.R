@@ -28,12 +28,12 @@ qualtrics <- scoreQuestionnaire(qualtrics)
 # qualtrics <- read.csv("../data/qualtrics.csv")
 
 # get merged behaviour 
-behaviour <- getTask("ghost", "workerId") # name is found in mongo collections
+# behaviour <- getTask("ghost", "workerId") # name is found in mongo collections
 
 # clean behaviour
-behaviour <- cleanBehaviour(behaviour)
+# behaviour <- cleanBehaviour(behaviour)
 # write.csv(behaviour,"../data/behaviour.csv")
-# behaviour <- read.csv("../data/behaviour.csv")
+behaviour <- read.csv("../data/behaviour.csv")
 
 # combine behaviour and questionnaire
 db <- prepareDataForAnalysis(behaviour, qualtrics)
@@ -42,7 +42,7 @@ lwf <- db$lwf
 wf <- db$wf
 
 # meaning of columns
-# video name, trial number, worker id, intervew date, noise (how many noise dots there 
+# video name, trial number, worker id, interview date, noise (how many noise dots there 
 # were in this trial), action (is the action type based on the word document called: 
 # specSheet_seeingGhost_v1.docx), scramble (if the dots are scramble or not, if positive 
 # then there is no identifiable agent in the cloud of dots), communicative (if the 
