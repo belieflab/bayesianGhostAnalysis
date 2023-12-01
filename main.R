@@ -33,7 +33,7 @@ qualtrics <- scoreQuestionnaire(qualtrics)
 # clean behaviour
 # behaviour <- cleanBehaviour(behaviour)
 # write.csv(behaviour,"../data/behaviour.csv")
-behaviour <- read.csv("../data/behaviour.csv")
+behaviour <- read.csv("/Users/gracehart/behaviour.csv")
 
 # combine behaviour and questionnaire
 db <- prepareDataForAnalysis(behaviour, qualtrics)
